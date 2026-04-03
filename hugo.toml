@@ -1,0 +1,4 @@
+baseURL = '/'
+locale = 'en-us'
+title = 'MMSD Deep Tunnel'
+disableKinds = ['taxonomy', 'term']

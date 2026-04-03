@@ -31,7 +31,9 @@ parse_values = fn card ->
     |> LazyHTML.query("input[name='current-storage']")
     |> Enum.at(0)
     |> case do
-      nil -> nil
+      nil ->
+        nil
+
       el ->
         case LazyHTML.attribute(el, "value") do
           val when val in [nil, ""] -> nil
@@ -41,19 +43,24 @@ parse_values = fn card ->
 
   current =
     current ||
-      (paragraphs
-       |> Enum.find(fn p -> String.contains?(LazyHTML.text(p), "CURRENT STORAGE") or String.contains?(LazyHTML.text(p), "CURRENTLY TREATING") end)
-       |> case do
-         nil -> ""
-         p -> parse_number_from_text.(LazyHTML.text(p))
-       end)
+      paragraphs
+      |> Enum.find(fn p ->
+        String.contains?(LazyHTML.text(p), "CURRENT STORAGE") or
+          String.contains?(LazyHTML.text(p), "CURRENTLY TREATING")
+      end)
+      |> case do
+        nil -> ""
+        p -> parse_number_from_text.(LazyHTML.text(p))
+      end
 
   max =
     card
     |> LazyHTML.query("input[name='max-capacity']")
     |> Enum.at(0)
     |> case do
-      nil -> nil
+      nil ->
+        nil
+
       el ->
         case LazyHTML.attribute(el, "value") do
           val when val in [nil, ""] -> nil
@@ -63,12 +70,12 @@ parse_values = fn card ->
 
   max =
     max ||
-      (paragraphs
-       |> Enum.find(fn p -> String.contains?(LazyHTML.text(p), "MAX CAPACITY") end)
-       |> case do
-         nil -> ""
-         p -> parse_number_from_text.(LazyHTML.text(p))
-       end)
+      paragraphs
+      |> Enum.find(fn p -> String.contains?(LazyHTML.text(p), "MAX CAPACITY") end)
+      |> case do
+        nil -> ""
+        p -> parse_number_from_text.(LazyHTML.text(p))
+      end
 
   {current, max}
 end

@@ -1,0 +1,98 @@
+{{ define "main" }}
+<h1>{{ .Site.Title }}</h1>
+<p>Data collected from the <a href="https://www.mmsd.com/about-us/milwaukee-rain-facility-information#facility">Metropolitan Milwaukee Sewerage District</a>. Last 7 days shown.</p>
+
+<div class="chart-container">
+  <h2>Deep Tunnel Storage</h2>
+  <canvas id="chart-deep-tunnel"></canvas>
+</div>
+
+<div class="chart-container">
+  <h2>Northwest Side Deep Tunnel Storage</h2>
+  <canvas id="chart-nw-deep-tunnel"></canvas>
+</div>
+
+<div class="chart-container">
+  <h2>South Shore Water Reclamation Facility</h2>
+  <canvas id="chart-south-shore"></canvas>
+</div>
+
+<div class="chart-container">
+  <h2>Jones Island Water Reclamation Facility</h2>
+  <canvas id="chart-jones-island"></canvas>
+</div>
+
+<script>
+
+const readings = {{ site.Data.readings }};
+
+function buildChart(canvasId, data, maxLabel, yLabel) {
+  const labels = data.map(d => d.time);
+  const currentVals = data.map(d => d.current);
+  const maxVals = data.map(d => d.max);
+
+  new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Current',
+          data: currentVals,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          fill: true,
+          tension: 0.2,
+          pointRadius: 1,
+        },
+        {
+          label: maxLabel,
+          data: maxVals,
+          borderColor: '#dc2626',
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: 'time',
+          title: { display: true, text: 'Time' },
+          time: {
+            unit: 'hour',
+            displayFormats: { hour: 'MMM d, ha' },
+            tooltipFormat: 'MMM d, h:mm a',
+          },
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: yLabel },
+        }
+      },
+      interaction: {
+        intersect: false,
+        mode: 'index',
+      }
+    }
+  });
+}
+
+function extract(readings, key) {
+  return readings
+    .filter(r => r[key].current != null)
+    .map(r => ({
+      time: r.scraped_at,
+      current: r[key].current,
+      max: r[key].max,
+    }));
+}
+
+buildChart('chart-deep-tunnel', extract(readings, 'deep_tunnel'), 'Max Capacity', 'Million Gallons');
+buildChart('chart-nw-deep-tunnel', extract(readings, 'nw_deep_tunnel'), 'Max Capacity', 'Million Gallons');
+buildChart('chart-south-shore', extract(readings, 'south_shore'), 'Max Capacity', 'Million Gallons Treated per Day');
+buildChart('chart-jones-island', extract(readings, 'jones_island'), 'Max Capacity', 'Million Gallons Treated per Day');
+</script>
+{{ end }}
