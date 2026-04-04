@@ -1,6 +1,7 @@
 Mix.install([
   {:req, "~> 0.5"},
-  {:lazy_html, "~> 0.1"}
+  {:lazy_html, "~> 0.1"},
+  {:nimble_csv, "~> 1.3"}
 ])
 
 url = "https://www.mmsd.com/about-us/milwaukee-rain-facility-information"
@@ -112,37 +113,21 @@ csv_path = "data.csv"
 header =
   "scraped_at,deep_tunnel_timestamp,deep_tunnel_current,deep_tunnel_max,nw_deep_tunnel_timestamp,nw_deep_tunnel_current,nw_deep_tunnel_max,south_shore_timestamp,south_shore_current,south_shore_max,jones_island_timestamp,jones_island_current,jones_island_max"
 
-parse_csv_field = fn str, index ->
-  # Simple CSV parser that handles quoted fields with commas
-  {_, fields} =
-    Enum.reduce(String.graphemes(str), {false, [""]}, fn char, {in_quotes, [current | rest]} ->
-      cond do
-        char == "\"" -> {!in_quotes, [current | rest]}
-        char == "," and not in_quotes -> {false, ["", current | rest]}
-        true -> {in_quotes, [current <> char | rest]}
-      end
-    end)
-
-  fields |> Enum.reverse() |> Enum.at(index, "")
-end
-
 current_timestamps = [dt_timestamp, nw_timestamp, ss_timestamp, ji_timestamp]
-# Timestamp column indices in the CSV
-timestamp_indices = [1, 4, 7, 10]
 
 last_timestamps =
   if File.exists?(csv_path) do
-    last_line =
+    rows =
       csv_path
       |> File.read!()
-      |> String.trim()
-      |> String.split("\n")
-      |> List.last()
+      |> NimbleCSV.RFC4180.parse_string(skip_headers: true)
 
-    if last_line == header do
-      nil
-    else
-      Enum.map(timestamp_indices, &parse_csv_field.(last_line, &1))
+    case List.last(rows) do
+      nil ->
+        nil
+
+      row ->
+        [Enum.at(row, 1), Enum.at(row, 4), Enum.at(row, 7), Enum.at(row, 10)]
     end
   else
     nil
@@ -158,33 +143,25 @@ else
   scraped_at = DateTime.utc_now() |> DateTime.to_iso8601()
 
   row =
-    [
-      scraped_at,
-      dt_timestamp,
-      dt_current,
-      dt_max,
-      nw_timestamp,
-      nw_current,
-      nw_max,
-      ss_timestamp,
-      ss_current,
-      ss_max,
-      ji_timestamp,
-      ji_current,
-      ji_max
-    ]
-    |> Enum.map(fn val ->
-      val = to_string(val)
+    NimbleCSV.RFC4180.dump_to_iodata([
+      [
+        scraped_at,
+        dt_timestamp,
+        dt_current,
+        dt_max,
+        nw_timestamp,
+        nw_current,
+        nw_max,
+        ss_timestamp,
+        ss_current,
+        ss_max,
+        ji_timestamp,
+        ji_current,
+        ji_max
+      ]
+    ])
 
-      if String.contains?(val, [",", "\""]) do
-        "\"" <> String.replace(val, "\"", "\"\"") <> "\""
-      else
-        val
-      end
-    end)
-    |> Enum.join(",")
-
-  File.write!(csv_path, row <> "\n", [:append])
+  File.write!(csv_path, row, [:append])
 
   IO.puts("Scraped and appended to #{csv_path}")
   IO.puts("Deep Tunnel: #{dt_current}/#{dt_max} MG (#{dt_timestamp})")

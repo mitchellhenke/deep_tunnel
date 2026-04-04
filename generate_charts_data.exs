@@ -1,3 +1,5 @@
+Mix.install([{:nimble_csv, "~> 1.3"}])
+
 csv_path = "data.csv"
 
 unless File.exists?(csv_path) do
@@ -5,28 +7,7 @@ unless File.exists?(csv_path) do
   System.halt(1)
 end
 
-lines =
-  csv_path
-  |> File.read!()
-  |> String.trim()
-  |> String.split("\n")
-
-[_header | rows] = lines
-
 one_week_ago = DateTime.utc_now() |> DateTime.add(-7, :day)
-
-parse_csv_line = fn line ->
-  {_, fields} =
-    Enum.reduce(String.graphemes(line), {false, [""]}, fn char, {in_quotes, [current | rest]} ->
-      cond do
-        char == "\"" -> {!in_quotes, [current | rest]}
-        char == "," and not in_quotes -> {false, ["", current | rest]}
-        true -> {in_quotes, [current <> char | rest]}
-      end
-    end)
-
-  Enum.reverse(fields)
-end
 
 to_int = fn str ->
   case Integer.parse(str || "") do
@@ -35,30 +16,31 @@ to_int = fn str ->
   end
 end
 
+rows =
+  csv_path
+  |> File.read!()
+  |> NimbleCSV.RFC4180.parse_string(skip_headers: true)
+
 readings =
   rows
   |> Enum.map(fn row ->
-    fields = parse_csv_line.(row)
-
-    scraped_at = Enum.at(fields, 0, nil)
-
     %{
-      scraped_at: scraped_at,
+      scraped_at: Enum.at(row, 0),
       deep_tunnel: %{
-        current: to_int.(Enum.at(fields, 2, nil)),
-        max: to_int.(Enum.at(fields, 3, nil))
+        current: to_int.(Enum.at(row, 2)),
+        max: to_int.(Enum.at(row, 3))
       },
       nw_deep_tunnel: %{
-        current: to_int.(Enum.at(fields, 5, nil)),
-        max: to_int.(Enum.at(fields, 6, nil))
+        current: to_int.(Enum.at(row, 5)),
+        max: to_int.(Enum.at(row, 6))
       },
       south_shore: %{
-        current: to_int.(Enum.at(fields, 8, nil)),
-        max: to_int.(Enum.at(fields, 9, nil))
+        current: to_int.(Enum.at(row, 8)),
+        max: to_int.(Enum.at(row, 9))
       },
       jones_island: %{
-        current: to_int.(Enum.at(fields, 11, nil)),
-        max: to_int.(Enum.at(fields, 12, nil))
+        current: to_int.(Enum.at(row, 11)),
+        max: to_int.(Enum.at(row, 12))
       }
     }
   end)
