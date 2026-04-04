@@ -4,22 +4,22 @@
 
 <div class="chart-container">
   <h2>Deep Tunnel Storage</h2>
-  <canvas id="chart-deep-tunnel"></canvas>
+  <div class="chart-wrapper"><canvas id="chart-deep-tunnel"></canvas></div>
 </div>
 
 <div class="chart-container">
   <h2>Northwest Side Deep Tunnel Storage</h2>
-  <canvas id="chart-nw-deep-tunnel"></canvas>
+  <div class="chart-wrapper"><canvas id="chart-nw-deep-tunnel"></canvas></div>
 </div>
 
 <div class="chart-container">
   <h2>South Shore Water Reclamation Facility</h2>
-  <canvas id="chart-south-shore"></canvas>
+  <div class="chart-wrapper"><canvas id="chart-south-shore"></canvas></div>
 </div>
 
 <div class="chart-container">
   <h2>Jones Island Water Reclamation Facility</h2>
-  <canvas id="chart-jones-island"></canvas>
+  <div class="chart-wrapper"><canvas id="chart-jones-island"></canvas></div>
 </div>
 
 <script>
@@ -57,6 +57,7 @@ function buildChart(canvasId, data, maxLabel, yLabel) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       scales: {
         x: {
           type: 'time',
