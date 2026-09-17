@@ -16,6 +16,20 @@ to_int = fn str ->
   end
 end
 
+to_float = fn str ->
+  case Float.parse(str || "") do
+    {n, _} -> n
+    :error -> nil
+  end
+end
+
+within_last_week? = fn %{scraped_at: ts} ->
+  case DateTime.from_iso8601(ts) do
+    {:ok, dt, _} -> DateTime.compare(dt, one_week_ago) != :lt
+    _ -> false
+  end
+end
+
 rows =
   csv_path
   |> File.read!()
@@ -44,13 +58,31 @@ readings =
       }
     }
   end)
-  |> Enum.filter(fn %{scraped_at: ts} ->
-    case DateTime.from_iso8601(ts) do
-      {:ok, dt, _} -> DateTime.compare(dt, one_week_ago) != :lt
-      _ -> false
-    end
-  end)
+  |> Enum.filter(within_last_week?)
 
 json = JSON.encode!(readings)
 File.write!("data/readings.json", json)
 IO.puts("Generated data/readings.json with #{length(readings)} readings")
+
+mccarty_csv_path = "mccarty.csv"
+
+mccarty_readings =
+  if File.exists?(mccarty_csv_path) do
+    mccarty_csv_path
+    |> File.read!()
+    |> NimbleCSV.RFC4180.parse_string(skip_headers: true)
+    |> Enum.map(fn row ->
+      %{
+        scraped_at: Enum.at(row, 0),
+        timestamp: Enum.at(row, 1),
+        gauge_height_ft: to_float.(Enum.at(row, 2)),
+        culvert_full_percent: to_float.(Enum.at(row, 3))
+      }
+    end)
+    |> Enum.filter(within_last_week?)
+  else
+    []
+  end
+
+File.write!("data/mccarty.json", JSON.encode!(mccarty_readings))
+IO.puts("Generated data/mccarty.json with #{length(mccarty_readings)} readings")

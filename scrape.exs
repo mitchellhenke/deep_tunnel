@@ -4,9 +4,10 @@ Mix.install([
   {:nimble_csv, "~> 1.3"}
 ])
 
-url = "https://www.mmsd.com/about-us/milwaukee-rain-facility-information"
+stormwater_url = "https://www.mmsd.com/about-us/milwaukee-rain-facility-information"
+mccarty_url = "https://www.mmsd.com/what-we-do/flood-management/menomonee-concrete-removal/honey-creek-mccarty-park-project/trash-rack-comments"
 
-%{status: 200, body: body} = Req.get!(url)
+%{status: 200, body: body} = Req.get!(stormwater_url)
 
 document = LazyHTML.from_document(body)
 
@@ -168,4 +169,65 @@ else
   IO.puts("NW Deep Tunnel: #{nw_current}/#{nw_max} MG (#{nw_timestamp})")
   IO.puts("South Shore: #{ss_current}/#{ss_max} MGD (#{ss_timestamp})")
   IO.puts("Jones Island: #{ji_current}/#{ji_max} MGD (#{ji_timestamp})")
+end
+
+# McCarty Park trash rack culvert (USGS gauge)
+
+%{status: 200, body: mccarty_body} = Req.get!(mccarty_url)
+
+gauge =
+  mccarty_body
+  |> LazyHTML.from_document()
+  |> LazyHTML.query("div.usgs-gauge")
+  |> Enum.at(0)
+
+gauge_text = fn selector ->
+  case gauge && Enum.at(LazyHTML.query(gauge, selector), 0) do
+    nil -> ""
+    el -> el |> LazyHTML.text() |> String.trim()
+  end
+end
+
+mc_gauge_height = gauge_text.(".usgs-gauge-value .usgs-gauge-number")
+mc_percent_full = gauge_text.(".usgs-gauge-percent .usgs-gauge-number")
+
+mc_timestamp =
+  ".usgs-gauge-time"
+  |> gauge_text.()
+  |> String.replace_prefix("As of:", "")
+  |> String.trim()
+
+mccarty_csv_path = "mccarty.csv"
+mccarty_header = "scraped_at,timestamp,gauge_height_ft,culvert_full_percent"
+
+last_mc_timestamp =
+  if File.exists?(mccarty_csv_path) do
+    mccarty_csv_path
+    |> File.read!()
+    |> NimbleCSV.RFC4180.parse_string(skip_headers: true)
+    |> List.last()
+    |> case do
+      nil -> nil
+      row -> Enum.at(row, 1)
+    end
+  end
+
+if last_mc_timestamp == mc_timestamp do
+  IO.puts("No update — McCarty timestamp unchanged")
+else
+  unless File.exists?(mccarty_csv_path) do
+    File.write!(mccarty_csv_path, mccarty_header <> "\n")
+  end
+
+  scraped_at = DateTime.utc_now() |> DateTime.to_iso8601()
+
+  row =
+    NimbleCSV.RFC4180.dump_to_iodata([
+      [scraped_at, mc_timestamp, mc_gauge_height, mc_percent_full]
+    ])
+
+  File.write!(mccarty_csv_path, row, [:append])
+
+  IO.puts("Scraped and appended to #{mccarty_csv_path}")
+  IO.puts("McCarty: #{mc_gauge_height} ft, #{mc_percent_full}% full (#{mc_timestamp})")
 end
