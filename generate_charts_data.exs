@@ -74,9 +74,13 @@ mccarty_readings =
     |> Enum.map(fn row ->
       %{
         scraped_at: Enum.at(row, 0),
-        timestamp: Enum.at(row, 1),
-        gauge_height_ft: to_float.(Enum.at(row, 2)),
-        culvert_full_percent: to_float.(Enum.at(row, 3))
+        mccarty: %{
+          current: to_float.(Enum.at(row, 3)),
+          max: 100
+        },
+        mccarty_gauge_height: %{
+          current: to_float.(Enum.at(row, 2))
+        }
       }
     end)
     |> Enum.filter(within_last_week?)

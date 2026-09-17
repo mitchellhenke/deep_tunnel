@@ -22,9 +22,20 @@
   <div class="chart-wrapper"><canvas id="chart-jones-island"></canvas></div>
 </div>
 
+<div class="chart-container">
+  <h2>McCarty Park Trash Rack Culvert</h2>
+  <div class="chart-wrapper"><canvas id="chart-mccarty"></canvas></div>
+</div>
+
+<div class="chart-container">
+  <h2>McCarty Park Culvert Gauge Height</h2>
+  <div class="chart-wrapper"><canvas id="chart-mccarty-gauge-height"></canvas></div>
+</div>
+
 <script>
 
-const readings = {{ site.Data.readings }};
+const readings = {{ hugo.Data.readings }};
+const mccartyReadings = {{ hugo.Data.mccarty }} ?? [];
 
 function buildChart(canvasId, data, maxLabel, yLabel) {
   const labels = data.map(d => d.time);
@@ -45,14 +56,14 @@ function buildChart(canvasId, data, maxLabel, yLabel) {
           tension: 0.2,
           pointRadius: 1,
         },
-        {
+        ...(maxLabel ? [{
           label: maxLabel,
           data: maxVals,
           borderColor: '#dc2626',
           borderDash: [5, 5],
           pointRadius: 0,
           fill: false,
-        }
+        }] : [])
       ]
     },
     options: {
@@ -95,5 +106,7 @@ buildChart('chart-deep-tunnel', extract(readings, 'deep_tunnel'), 'Max Capacity'
 buildChart('chart-nw-deep-tunnel', extract(readings, 'nw_deep_tunnel'), 'Max Capacity', 'Million Gallons');
 buildChart('chart-south-shore', extract(readings, 'south_shore'), 'Max Capacity', 'Million Gallons Treated per Day');
 buildChart('chart-jones-island', extract(readings, 'jones_island'), 'Max Capacity', 'Million Gallons Treated per Day');
+buildChart('chart-mccarty', extract(mccartyReadings, 'mccarty'), 'Full', '% Culvert Full');
+buildChart('chart-mccarty-gauge-height', extract(mccartyReadings, 'mccarty_gauge_height'), null, 'Feet');
 </script>
 {{ end }}
